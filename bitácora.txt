@@ -8,3 +8,4 @@
 ['Manual', '25', 'Costa Rica', 'Misil ligero', 10, [[-120, 0, 0], [60, 0, 0]], ['Canada', 'Region de prueba', 'Zona oeste'], 11, 'Acertó']
 ['Manual', '25', 'Costa Rica', 'Misil ligero', 10, [[-120, 0, 0], [60, 0, 0]], ['Canada', 'Region de prueba', 'Zona oeste'], 11, 'Acertó']
 ['Manual', '25', 'Costa Rica', 'Misil ligero', 10, [[-120, 0, 0], [60, 0, 0]], ['Canada', 'Region de prueba', 'Zona oeste'], 11, 'Acertó']
+['Manual', '45', 'Egipto', 'Misil ligero', 5, [[-120, 0, 0], [35, 0, 0]], ['Estados Unidos', 'Region de prueba', 'Zona oeste'], 9, 'Acertó']

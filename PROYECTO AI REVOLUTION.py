@@ -537,45 +537,69 @@ def crear_vida_territorios(mapa):
 
     return registros
 
-# Pide una longitud o latitud mediante ventanas.
+# Pide una longitud o latitud en una sola ventana.
 # E: nombre de la coordenada y límite de grados.
 # S: lista [grados, minutos, segundos] o None si se cancela.
 # R: límite de 180 para longitud o 90 para latitud.
 
 def pedir_coordenada(nombre, limite):
-    grados = pedir_entero(
-    nombre,
-    "Ingrese los grados del destino al que desea disparar:",-limite,limite)
+    class DialogoCoordenada(simpledialog.Dialog):
+        def body(self, marco):
+            tk.Label(marco, text="Ingrese la coordenada del destino:").grid(
+                row=0, column=0, columnspan=3, padx=10, pady=10
+            )
+            self.campos = []
+            for columna, (etiqueta, minimo, maximo) in enumerate([
+                ("Grados", -limite, limite),
+                ("Minutos", 0, 59),
+                ("Segundos", 0, 59),
+            ]):
+                tk.Label(marco, text=etiqueta).grid(row=1, column=columna)
+                campo = tk.Spinbox(
+                    marco, from_=minimo, to=maximo, increment=1, width=10
+                )
+                campo.delete(0, tk.END)
+                campo.insert(0, "0")
+                campo.grid(row=2, column=columna, padx=10, pady=5)
+                self.campos.append(campo)
+            self.error = tk.StringVar()
+            tk.Label(
+                marco, textvariable=self.error, fg="red", wraplength=330
+            ).grid(row=3, column=0, columnspan=3, padx=10, pady=5)
+            return self.campos[0]
 
-    if grados is None:
-        return None
+        def buttonbox(self):
+            botones = tk.Frame(self)
+            tk.Button(botones, text="Aceptar", width=10, command=self.ok).pack(
+                side=tk.LEFT, padx=5, pady=5
+            )
+            tk.Button(
+                botones, text="Cancelar", width=10, command=self.cancel
+            ).pack(side=tk.LEFT, padx=5, pady=5)
+            botones.pack()
+            self.bind("<Return>", self.ok)
+            self.bind("<Escape>", self.cancel)
 
-    minutos = pedir_entero(
-        nombre,
-        "Ingrese los minutos del destino al que desea disparar:",0,59)
-    
+        def validate(self):
+            try:
+                coordenada = [int(campo.get()) for campo in self.campos]
+            except ValueError:
+                self.error.set("Ingrese números enteros en los tres campos.")
+                return False
+            if not validar_coordenada(coordenada, limite):
+                self.error.set(
+                    f"Los grados deben estar entre {-limite} y {limite}, "
+                    "y los minutos y segundos entre 0 y 59. "
+                    "En el límite de grados, minutos y segundos deben ser 0."
+                )
+                return False
+            self.coordenada = coordenada
+            return True
 
-    if minutos is None:
-        return None
+        def apply(self):
+            self.result = self.coordenada
 
-    segundos = pedir_entero(
-        nombre,
-        "Ingrese los segundos del destino al que desea disparar:",0,59)
-
-    if segundos is None:
-        return None
-
-    coordenada = [grados, minutos, segundos]
-
-    if not validar_coordenada(coordenada, limite):
-        messagebox.showerror(
-            "Coordenada inválida",
-            "La coordenada completa supera el límite permitido.",
-            parent=ventana
-        )
-        return None
-
-    return coordenada
+    return DialogoCoordenada(ventana, title=nombre).result
 
 def seleccionar_clave_manual():
     clave = simpledialog.askstring(
@@ -1877,6 +1901,53 @@ def dibujar_nombre_pais(registro):
                 break
 
 
+# Muestra una ventana de diálogo con la vida al hacer clic en un rectángulo.
+# E: registro de vida del territorio seleccionado.
+# S: ventana de diálogo con los datos de vida del país y del territorio.
+def mostrar_vida_rectangulo(registro):
+    nombre_pais = registro[0]
+    datos_pais = consultar_vida_pais(vida_territorios, nombre_pais)
+
+    area_inicial = registro[3]
+    area_viva = registro[4]
+    area_destruida = area_inicial - area_viva
+
+    if area_inicial > 0:
+        porcentaje_territorio = area_viva / area_inicial * 100
+    else:
+        porcentaje_territorio = 0
+
+    mensaje = (
+        "País: " + nombre_pais +
+        "\nVida del país: " + str(round(datos_pais[3], 2)) + "%" +
+        "\nÁrea inicial del país: " + formatear_numero(datos_pais[0]) + " km²" +
+        "\nÁrea viva del país: " + formatear_numero(datos_pais[1]) + " km²" +
+        "\nÁrea destruida del país: " + formatear_numero(datos_pais[2]) + " km²" +
+        "\n\nEstado: " + registro[1] +
+        "\nTerritorio: " + registro[2] +
+        "\nVida del territorio: " + str(round(porcentaje_territorio, 2)) + "%" +
+        "\nÁrea inicial: " + formatear_numero(area_inicial) + " km²" +
+        "\nÁrea viva: " + formatear_numero(area_viva) + " km²" +
+        "\nÁrea destruida: " + formatear_numero(area_destruida) + " km²"
+    )
+
+    messagebox.showinfo(
+        "Vida de " + nombre_pais,
+        mensaje,
+        parent=ventana
+    )
+
+
+# Asocia el evento de clic al rectángulo de un territorio en el mapa.
+# E: etiqueta del territorio en el canvas y su registro de vida.
+# S: abre la ventana de diálogo con la vida al hacer clic izquierdo.
+def vincular_click_rectangulo(etiqueta, registro):
+    def al_hacer_click(evento):
+        mostrar_vida_rectangulo(registro)
+
+    canvas.tag_bind(etiqueta, "<Button-1>", al_hacer_click)
+
+
 # ---------------------------------------
 # GUI
 # ---------------------------------------
@@ -1962,6 +2033,7 @@ if mapa is not None:
 
                     )
                     dibujar_nombre_pais(registro)
+                    vincular_click_rectangulo(etiqueta, registro)
 
 misiles = leer_archivo("misiles.txt")
 
